@@ -4,7 +4,7 @@ FROM node:18-bullseye-slim as base
 # Install openssl for Prisma
 RUN apt-get update && apt-get install -y openssl
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 # Install all node_modules, including dev dependencies
 FROM base as deps
@@ -42,7 +42,7 @@ RUN npm run build
 # Finally, build the production image with minimal footprint
 FROM base
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 RUN mkdir /app
 WORKDIR /app
@@ -51,7 +51,11 @@ COPY --from=production-deps /app/node_modules /app/node_modules
 COPY --from=build /app/node_modules/.prisma /app/node_modules/.prisma
 COPY --from=build /app/build /app/build
 COPY --from=build /app/public /app/public
-ADD . .
+COPY --from=build /app/package.json /app/package.json
+COPY --from=build /app/start.sh /app/start.sh
+COPY --from=build /app/prisma /app/prisma
 
-# CMD ["npm", "run", "start"]
+# Make start.sh executable
+RUN chmod +x start.sh
+
 ENTRYPOINT [ "./start.sh" ]
